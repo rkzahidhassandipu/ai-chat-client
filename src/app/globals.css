@@ -1,0 +1,108 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #f4f4f8;
+  --nav: #ffffff;
+  --sidebar: #ffffff;
+  --surface: #f0f0fa;
+  --card: #ffffff;
+  --border: rgba(0, 0, 0, 0.07);
+  --text: #111128;
+  --text-muted: #8888aa;
+  --accent: #6366f1;
+  --accent-glow: rgba(99, 102, 241, 0.08);
+  --msg-them: #eeeefc;
+  --msg-them-text: #111128;
+  --input-bg: #f0f0fa;
+}
+
+.dark {
+  --bg: #070710;
+  --nav: #0c0c18;
+  --sidebar: #0e0e1c;
+  --surface: #14142a;
+  --card: #1a1a35;
+  --border: rgba(255, 255, 255, 0.06);
+  --text: #e8e8f8;
+  --text-muted: #5a5a80;
+  --accent: #6366f1;
+  --accent-glow: rgba(99, 102, 241, 0.15);
+  --msg-them: #1c1c38;
+  --msg-them-text: #d8d8f0;
+  --input-bg: #14142a;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  font-family: 'Outfit', 'DM Sans', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  transition: background 0.3s, color 0.3s;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 3px;
+  height: 3px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.2);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.4);
+}
+
+/* Input placeholder */
+input::placeholder,
+textarea::placeholder {
+  opacity: 0.4;
+}
+
+/* Selection */
+::selection {
+  background: rgba(99, 102, 241, 0.3);
+}
+
+/* Animations */
+@keyframes bounce-dot {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-5px); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(-12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease forwards;
+}
+
+.animate-slide-in {
+  animation: slide-in 0.2s ease forwards;
+}
+
+/* Message bubble */
+.msg-bubble {
+  animation: fade-in 0.18s ease forwards;
+}

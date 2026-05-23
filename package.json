@@ -1,0 +1,40 @@
+{
+  "name": "ai-chat-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@tanstack/react-form": "^0.28.0",
+    "@tanstack/react-query": "^5.40.0",
+    "@tanstack/react-query-devtools": "^5.40.0",
+    "@tanstack/zod-form-adapter": "^0.28.0",
+    "axios": "^1.7.2",
+    "cache-manager-ioredis-yet": "^2.1.2",
+    "clsx": "^2.1.1",
+    "date-fns": "^3.6.0",
+    "ioredis": "^5.10.1",
+    "js-cookie": "^3.0.7",
+    "next": "14.2.3",
+    "react": "^18",
+    "react-dom": "^18",
+    "socket.io-client": "^4.8.3",
+    "zod": "^3.23.8",
+    "zustand": "^4.5.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.0.1",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.3",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  }
+}
