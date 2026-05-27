@@ -18,12 +18,12 @@ export const ChatSidebar = ({
   onSelectChat,
 }: ChatSidebarProps) => {
   const [search, setSearch] = useState("");
-  const { user } = useAuthStore();
+  const { user, accessToken } = useAuthStore();
   const queryClient = useQueryClient();
 
   useChatInit();
 
-  const { data: conversations = [], isLoading } = useConversations();
+  const { data: conversations = [], isFetching } = useConversations();
 
   const privateConvs = conversations
     .filter((c) => c.type === "PRIVATE")
@@ -119,23 +119,9 @@ export const ChatSidebar = ({
 
       {/* Content */}
       <div style={{ flex: 1, overflowY: "auto" }}>
-        {/* Loading */}
-        {isLoading && (
-          <div
-            style={{
-              padding: 20,
-              textAlign: "center",
-              color: "var(--text-muted)",
-              fontSize: 13,
-            }}
-          >
-            Loading...
-          </div>
-        )}
 
         {/* Messages list */}
         {activeTab === "messages" &&
-          !isLoading &&
           privateConvs.map((conv) => {
             const otherMember = conv.members.find((m) => m.userId !== user?.id);
             return (
@@ -154,13 +140,13 @@ export const ChatSidebar = ({
                 unread={0}
                 isActive={activeChat === conv.id}
                 onClick={() => onSelectChat(conv.id, otherMember?.user)}
+                onMouseEnter={() => handleMouseEnter(conv.id)}
               />
             );
           })}
 
         {/* Groups list */}
         {activeTab === "groups" &&
-          !isLoading &&
           groupConvs.map((conv) => (
             <ChatConvItem
               key={conv.id}
@@ -181,7 +167,8 @@ export const ChatSidebar = ({
 
         {/* Empty state */}
         {activeTab === "messages" &&
-          !isLoading &&
+          !isFetching &&
+          !!accessToken &&
           privateConvs.length === 0 && (
             <div
               style={{
@@ -192,6 +179,22 @@ export const ChatSidebar = ({
               }}
             >
               No conversations yet
+            </div>
+          )}
+
+        {activeTab === "groups" &&
+          !isFetching &&
+          !!accessToken &&
+          groupConvs.length === 0 && (
+            <div
+              style={{
+                padding: 20,
+                textAlign: "center",
+                color: "var(--text-muted)",
+                fontSize: 13,
+              }}
+            >
+              No groups yet
             </div>
           )}
       </div>

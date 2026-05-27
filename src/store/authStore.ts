@@ -1,8 +1,8 @@
-'use client';
-import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import { User } from '@/types';
-import { setAuthToken } from '@/lib/axios';
+"use client";
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+import { User } from "@/types";
+import { setAuthToken } from "@/lib/axios";
 
 interface AuthState {
   user: User | null;
@@ -45,7 +45,7 @@ export const useAuthStore = create<AuthState>()(
       },
     }),
     {
-      name: 'ai-chat-auth',
+      name: "ai-chat-auth",
       storage: createJSONStorage(() => sessionStorage), // sessionStorage — tab বন্ধ হলে clear
       partialize: (state) => ({
         // accessToken store করা হচ্ছে না
@@ -54,14 +54,18 @@ export const useAuthStore = create<AuthState>()(
         isAuthenticated: state.isAuthenticated,
       }),
       onRehydrateStorage: () => (state) => {
-        // Page reload এ accessToken নেই — refresh করে নাও
         if (state?.isAuthenticated && !state?.accessToken) {
-          import('@/services/auth.service').then(({ authService }) => {
+          import("@/services/auth.service").then(({ authService }) => {
             authService
               .refreshToken()
               .then(({ data }) => {
                 const token = data.data.accessToken;
                 state.setToken(token);
+
+                // ✅ chatService এ সাথে সাথে token set করুন
+                import("@/services/chat.service").then(({ chatService }) => {
+                  chatService.setToken(token);
+                });
               })
               .catch(() => {
                 state.logout();

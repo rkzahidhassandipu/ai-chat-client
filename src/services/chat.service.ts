@@ -26,6 +26,12 @@ export interface Message {
   senderId: string;
   content: string;
   type: MessageType;
+  fileUrl?: string;
+  fileName?: string;
+  fileSize?: number;
+  translated?: string;
+  translation?: string;
+  isRead: boolean;
   isEdited: boolean;
   isDeleted: boolean;
   createdAt: string;

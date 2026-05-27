@@ -20,19 +20,28 @@ interface ChatWindowProps {
 
 export function ChatWindow({ chatId, chatUser }: ChatWindowProps) {
   const [input, setInput] = useState("");
-  const [showTranslation, setShowTranslation] = useState<Record<string, boolean>>({});
+  const [showTranslation, setShowTranslation] = useState<
+    Record<string, boolean>
+  >({});
   const endRef = useRef<HTMLDivElement>(null);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const { data: messages = [], isLoading } = useMessages(chatId);
-  const { isTyping } = useChatWindow(chatId); // ✅ useEffect সরানো হয়েছে
+  const { isTyping } = useChatWindow(chatId);
 
   // Auto scroll
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Cleanup typing timer on chat change
+  useEffect(() => {
+    return () => {
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    };
+  }, [chatId]);
 
   // Send message
   const sendMessage = useCallback(() => {
@@ -44,8 +53,10 @@ export function ChatWindow({ chatId, chatUser }: ChatWindowProps) {
       senderId: user.id,
       content: input.trim(),
       type: "TEXT",
+      isRead: false,
       isEdited: false,
       isDeleted: false,
+      translated: undefined,
       createdAt: new Date().toISOString(),
       sender: { id: user.id, name: user.name, avatar: user.avatar },
       readReceipts: [],
@@ -58,6 +69,7 @@ export function ChatWindow({ chatId, chatUser }: ChatWindowProps) {
 
     chatService.sendMessage(chatId, input.trim());
     setInput("");
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
     chatService.stopTyping(chatId);
   }, [input, chatId, user, queryClient]);
 
@@ -86,62 +98,128 @@ export function ChatWindow({ chatId, chatUser }: ChatWindowProps) {
 
   if (!chatId || !chatUser) {
     return (
-      <div style={{
-        flex: 1, display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "center",
-        background: "var(--bg)", gap: 12,
-      }}>
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "var(--bg)",
+          gap: 12,
+        }}
+      >
         <div style={{ fontSize: 48 }}>💬</div>
-        <div style={{ color: "var(--text)", fontWeight: 700, fontSize: 18 }}>Select a conversation</div>
-        <div style={{ color: "var(--text-muted)", fontSize: 14 }}>Choose from your messages on the left</div>
+        <div style={{ color: "var(--text)", fontWeight: 700, fontSize: 18 }}>
+          Select a conversation
+        </div>
+        <div style={{ color: "var(--text-muted)", fontSize: 14 }}>
+          Choose from your messages on the left
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-
+    <div
+      style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}
+    >
       {/* Header */}
-      <div style={{
-        padding: "13px 20px", borderBottom: "1px solid var(--border)",
-        display: "flex", alignItems: "center", gap: 12,
-        background: "var(--sidebar)", flexShrink: 0,
-      }}>
-        <Avatar name={chatUser.name} src={chatUser.avatar} size={40} radius={12} status={chatUser.status as any} showStatus />
+      <div
+        style={{
+          padding: "13px 20px",
+          borderBottom: "1px solid var(--border)",
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          background: "var(--sidebar)",
+          flexShrink: 0,
+        }}
+      >
+        <Avatar
+          name={chatUser.name}
+          src={chatUser.avatar}
+          size={40}
+          radius={12}
+          status={chatUser.status as any}
+          showStatus
+        />
         <div style={{ flex: 1 }}>
-          <div style={{ color: "var(--text)", fontWeight: 700, fontSize: 15, letterSpacing: -0.3 }}>{chatUser.name}</div>
+          <div
+            style={{
+              color: "var(--text)",
+              fontWeight: 700,
+              fontSize: 15,
+              letterSpacing: -0.3,
+            }}
+          >
+            {chatUser.name}
+          </div>
           <div style={{ color: "var(--text-muted)", fontSize: 12 }}>
-            {chatUser.status === "ONLINE" ? "🟢 Active now" : chatUser.status === "AWAY" ? "🟡 Away" : "⚫ Offline"}
+            {chatUser.status === "ONLINE"
+              ? "🟢 Active now"
+              : chatUser.status === "AWAY"
+                ? "🟡 Away"
+                : "⚫ Offline"}
           </div>
         </div>
         <div style={{ display: "flex", gap: 6 }}>
           {["📞", "📹", "🔍"].map((icon) => (
-            <button key={icon} style={{
-              background: "var(--surface)", border: "1px solid var(--border)",
-              borderRadius: 10, padding: "7px 11px", cursor: "pointer", fontSize: 15,
-            }}>{icon}</button>
+            <button
+              key={icon}
+              style={{
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
+                borderRadius: 10,
+                padding: "7px 11px",
+                cursor: "pointer",
+                fontSize: 15,
+              }}
+            >
+              {icon}
+            </button>
           ))}
         </div>
       </div>
 
       {/* Messages */}
-      <div style={{
-        flex: 1, overflowY: "auto", padding: "20px 24px",
-        display: "flex", flexDirection: "column", gap: 2,
-        background: "var(--bg)",
-      }}>
+      <div
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          padding: "20px 24px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 2,
+          background: "var(--bg)",
+        }}
+      >
         {isLoading && (
-          <div style={{ textAlign: "center", color: "var(--text-muted)", fontSize: 13, padding: 20 }}>
+          <div
+            style={{
+              textAlign: "center",
+              color: "var(--text-muted)",
+              fontSize: 13,
+              padding: 20,
+            }}
+          >
             Loading messages...
           </div>
         )}
 
         <div style={{ textAlign: "center", margin: "4px 0 16px" }}>
-          <span style={{
-            background: "var(--surface)", border: "1px solid var(--border)",
-            color: "var(--text-muted)", fontSize: 11,
-            padding: "3px 14px", borderRadius: 20,
-          }}>Today</span>
+          <span
+            style={{
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
+              color: "var(--text-muted)",
+              fontSize: 11,
+              padding: "3px 14px",
+              borderRadius: 20,
+            }}
+          >
+            Today
+          </span>
         </div>
 
         {messages.map((msg) => (
@@ -150,148 +228,365 @@ export function ChatWindow({ chatId, chatUser }: ChatWindowProps) {
             msg={msg}
             isMe={msg.senderId === user?.id}
             showTrans={!!showTranslation[msg.id]}
-            onToggleTrans={() => setShowTranslation((p) => ({ ...p, [msg.id]: !p[msg.id] }))}
+            onToggleTrans={() =>
+              setShowTranslation((p) => ({ ...p, [msg.id]: !p[msg.id] }))
+            }
           />
         ))}
 
         {/* Typing indicator */}
         {isTyping && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "4px 0" }}>
-            <div style={{
-              background: "var(--msg-them)", padding: "10px 14px",
-              borderRadius: "16px 16px 16px 4px",
-              display: "flex", gap: 4, alignItems: "center",
-            }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              margin: "4px 0",
+            }}
+          >
+            <div
+              style={{
+                background: "var(--msg-them)",
+                padding: "10px 14px",
+                borderRadius: "16px 16px 16px 4px",
+                display: "flex",
+                gap: 4,
+                alignItems: "center",
+              }}
+            >
               {[0, 1, 2].map((i) => (
-                <div key={i} style={{
-                  width: 6, height: 6, background: "var(--text-muted)",
-                  borderRadius: "50%",
-                  animation: `bounce-dot 1.2s ease-in-out ${i * 0.2}s infinite`,
-                }} />
+                <div
+                  key={i}
+                  style={{
+                    width: 6,
+                    height: 6,
+                    background: "var(--text-muted)",
+                    borderRadius: "50%",
+                    animation: `bounce-dot 1.2s ease-in-out ${i * 0.2}s infinite`,
+                  }}
+                />
               ))}
             </div>
-            <span style={{ color: "var(--text-muted)", fontSize: 12 }}>{chatUser.name} is typing...</span>
+            <span style={{ color: "var(--text-muted)", fontSize: 12 }}>
+              {chatUser.name} is typing...
+            </span>
           </div>
         )}
         <div ref={endRef} />
       </div>
 
-      {/* Input */}
-      <div style={{
-        padding: "14px 20px", borderTop: "1px solid var(--border)",
-        background: "var(--sidebar)", flexShrink: 0,
-      }}>
-        <div style={{
-          display: "flex", alignItems: "center",
-          background: "var(--input-bg)", border: "1px solid var(--border)",
-          borderRadius: 16, padding: "4px 6px 4px 14px", gap: 6,
-        }}>
+      {/* Input Box */}
+      <div
+        style={{
+          padding: "14px 20px",
+          borderTop: "1px solid var(--border)",
+          background: "var(--sidebar)",
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            background: "var(--input-bg)",
+            border: "1px solid var(--border)",
+            borderRadius: 16,
+            padding: "4px 6px 4px 14px",
+            gap: 6,
+          }}
+        >
           <input
             value={input}
             onChange={handleInputChange}
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
             placeholder={`Message ${chatUser.name}...`}
             style={{
-              flex: 1, background: "transparent", border: "none",
-              outline: "none", color: "var(--text)", fontSize: 14, padding: "8px 0",
+              flex: 1,
+              background: "transparent",
+              border: "none",
+              outline: "none",
+              color: "var(--text)",
+              fontSize: 14,
+              padding: "8px 0",
             }}
           />
-          <label style={{ cursor: "pointer", fontSize: 17, padding: "4px 6px", color: "var(--text-muted)" }}>
+          <label
+            style={{
+              cursor: "pointer",
+              fontSize: 17,
+              padding: "4px 6px",
+              color: "var(--text-muted)",
+            }}
+          >
             📎
-            <input type="file" onChange={handleFileUpload} style={{ display: "none" }} />
+            <input
+              type="file"
+              onChange={handleFileUpload}
+              style={{ display: "none" }}
+            />
           </label>
           <button
             onClick={sendMessage}
+            disabled={!input.trim()}
             style={{
-              background: input.trim() ? "linear-gradient(135deg, #6366f1, #8b5cf6)" : "var(--surface)",
+              background: input.trim()
+                ? "linear-gradient(135deg, #6366f1, #8b5cf6)"
+                : "var(--surface)",
               border: `1px solid ${input.trim() ? "transparent" : "var(--border)"}`,
-              borderRadius: 12, padding: "8px 16px",
-              cursor: "pointer", fontSize: 16,
+              borderRadius: 12,
+              padding: "8px 16px",
+              cursor: "pointer",
+              fontSize: 16,
               color: input.trim() ? "#fff" : "var(--text-muted)",
-              fontWeight: 600, transition: "all 0.2s",
+              fontWeight: 600,
+              transition: "all 0.2s",
             }}
-          >➤</button>
+          >
+            ➤
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-// ─── Message Bubble ───────────────────────────────────────────────────────────
-function MessageBubble({ msg, isMe, showTrans, onToggleTrans }: {
-  msg: Message; isMe: boolean; showTrans: boolean; onToggleTrans: () => void;
+// ─── Message Bubble (Updated) ───────────────────────────────────────────────────
+function MessageBubble({
+  msg,
+  isMe,
+  showTrans,
+  onToggleTrans,
+}: {
+  msg: Message;
+  isMe: boolean;
+  showTrans: boolean;
+  onToggleTrans: () => void;
 }) {
   const isDeleted = msg.isDeleted;
   const isImage = msg.type === "IMAGE";
-  const isFile = msg.type === "FILE" || msg.type === "AUDIO" || msg.type === "VIDEO" || msg.type === "VOICE";
+  const isFile =
+    msg.type === "FILE" ||
+    msg.type === "AUDIO" ||
+    msg.type === "VIDEO" ||
+    msg.type === "VOICE";
+
+  // ধরা যাক আপনার ব্যাকএন্ড ডাটাতে translation ফিল্ডটি 'translation' নামে আসে
+  // (যদি অন্য নামে আসে যেমন translationText বা translatedContent, তাহলে সেটি এখানে পরিবর্তন করুন)
+  const hasTranslation = !!msg.translation;
 
   return (
-    <div style={{
-      display: "flex", flexDirection: "column",
-      alignItems: isMe ? "flex-end" : "flex-start",
-      marginBottom: 6,
-    }}>
-      <div style={{ maxWidth: "60%", display: "flex", flexDirection: "column", gap: 3 }}>
-
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: isMe ? "flex-end" : "flex-start",
+        marginBottom: 8,
+      }}
+    >
+      <div
+        style={{
+          maxWidth: "60%",
+          display: "flex",
+          flexDirection: "column",
+          gap: 3,
+        }}
+      >
         {isImage && !isDeleted && (
-          <img src={msg.content} alt="image" style={{
-            maxWidth: 240,
-            borderRadius: isMe ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
-            cursor: "pointer", border: "1px solid var(--border)",
-          }} />
+          <img
+            src={msg.content}
+            alt="image"
+            style={{
+              maxWidth: 240,
+              borderRadius: isMe ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+              cursor: "pointer",
+              border: "1px solid var(--border)",
+            }}
+          />
         )}
 
         {isFile && !isDeleted && (
-          <a href={msg.content} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
-            <div style={{
-              background: isMe ? "linear-gradient(135deg, #6366f1, #8b5cf6)" : "var(--msg-them)",
-              borderRadius: isMe ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
-              padding: "10px 14px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer",
-            }}>
-              <div style={{
-                width: 36, height: 36,
-                background: isMe ? "rgba(255,255,255,0.15)" : "var(--surface)",
-                borderRadius: 8, display: "flex", alignItems: "center",
-                justifyContent: "center", fontSize: 18, flexShrink: 0,
-              }}>
-                {msg.type === "AUDIO" ? "🎵" : msg.type === "VIDEO" ? "🎬" : msg.type === "VOICE" ? "🎤" : "📄"}
+          <a
+            href={msg.content}
+            target="_blank"
+            rel="noreferrer"
+            style={{ textDecoration: "none" }}
+          >
+            <div
+              style={{
+                background: isMe
+                  ? "linear-gradient(135deg, #6366f1, #8b5cf6)"
+                  : "var(--msg-them)",
+                borderRadius: isMe
+                  ? "16px 16px 4px 16px"
+                  : "16px 16px 16px 4px",
+                padding: "10px 14px",
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                cursor: "pointer",
+              }}
+            >
+              <div
+                style={{
+                  width: 36,
+                  height: 36,
+                  background: isMe
+                    ? "rgba(255,255,255,0.15)"
+                    : "var(--surface)",
+                  borderRadius: 8,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 18,
+                  flexShrink: 0,
+                }}
+              >
+                {msg.type === "AUDIO"
+                  ? "🎵"
+                  : msg.type === "VIDEO"
+                    ? "🎬"
+                    : msg.type === "VOICE"
+                      ? "🎤"
+                      : "📄"}
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ color: isMe ? "#fff" : "var(--text)", fontSize: 13, fontWeight: 600 }}>
+                <div
+                  style={{
+                    color: isMe ? "#fff" : "var(--text)",
+                    fontSize: 13,
+                    fontWeight: 600,
+                  }}
+                >
                   {msg.content.split("/").pop()}
                 </div>
-                <div style={{ color: isMe ? "rgba(255,255,255,0.6)" : "var(--text-muted)", fontSize: 11 }}>
+                <div
+                  style={{
+                    color: isMe ? "rgba(255,255,255,0.6)" : "var(--text-muted)",
+                    fontSize: 11,
+                  }}
+                >
                   {msg.type}
                 </div>
               </div>
-              <span style={{ color: isMe ? "rgba(255,255,255,0.7)" : "var(--text-muted)", fontSize: 16 }}>⬇</span>
+              <span
+                style={{
+                  color: isMe ? "rgba(255,255,255,0.7)" : "var(--text-muted)",
+                  fontSize: 16,
+                }}
+              >
+                ⬇
+              </span>
             </div>
           </a>
         )}
 
         {(msg.type === "TEXT" || msg.type === "LINK" || isDeleted) && (
-          <div style={{
-            background: isDeleted ? "var(--surface)" : isMe ? "linear-gradient(135deg, #6366f1, #8b5cf6)" : "var(--msg-them)",
-            color: isDeleted ? "var(--text-muted)" : isMe ? "#fff" : "var(--msg-them-text)",
-            padding: "10px 14px",
-            borderRadius: isMe ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
-            fontSize: 14, lineHeight: 1.5,
-            fontStyle: isDeleted ? "italic" : "normal",
-            wordBreak: "break-word",
-          }}>
-            {msg.content}
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {/* মূল মেসেজ কন্টেন্ট */}
+            <div
+              style={{
+                background: isDeleted
+                  ? "var(--surface)"
+                  : isMe
+                    ? "linear-gradient(135deg, #6366f1, #8b5cf6)"
+                    : "var(--msg-them)",
+                color: isDeleted
+                  ? "var(--text-muted)"
+                  : isMe
+                    ? "#fff"
+                    : "var(--msg-them-text)",
+                padding: "10px 14px",
+                borderRadius: isMe
+                  ? "16px 16px 4px 16px"
+                  : "16px 16px 16px 4px",
+                fontSize: 14,
+                lineHeight: 1.5,
+                fontStyle: isDeleted ? "italic" : "normal",
+                wordBreak: "break-word",
+              }}
+            >
+              {msg.content}
+            </div>
+
+            {/* অনূদিত টেক্সট ব্লক (যদি অনুবাদ থাকে এবং showTrans ট্রু হয়) */}
+            {hasTranslation && showTrans && !isDeleted && (
+              <div
+                style={{
+                  background: "var(--surface)",
+                  color: "var(--text)",
+                  padding: "8px 12px",
+                  borderRadius: 12,
+                  fontSize: 13,
+                  lineHeight: 1.4,
+                  border: "1px dashed var(--border)",
+                  marginTop: 2,
+                  wordBreak: "break-word",
+                }}
+              >
+                <span
+                  style={{
+                    display: "block",
+                    fontSize: 10,
+                    color: "var(--text-muted)",
+                    marginBottom: 2,
+                    fontWeight: 600,
+                  }}
+                >
+                  🌐 TRANSLATION:
+                </span>
+                {msg.translation}
+              </div>
+            )}
           </div>
         )}
 
-        <div style={{
-          display: "flex", alignItems: "center", gap: 6, padding: "0 4px",
-          flexDirection: isMe ? "row-reverse" : "row",
-        }}>
-          <span style={{ color: "var(--text-muted)", fontSize: 11 }}>{formatTime(msg.createdAt)}</span>
+        {/* মেটাডাটা এবং অ্যাকশন সেকশন */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "0 4px",
+            flexDirection: isMe ? "row-reverse" : "row",
+          }}
+        >
+          <span style={{ color: "var(--text-muted)", fontSize: 11 }}>
+            {formatTime(msg.createdAt)}
+          </span>
+
           {msg.isEdited && !isDeleted && (
-            <span style={{ color: "var(--text-muted)", fontSize: 10 }}>edited</span>
+            <span style={{ color: "var(--text-muted)", fontSize: 10 }}>
+              edited
+            </span>
           )}
-          {isMe && !isDeleted && <span style={{ color: "var(--accent)", fontSize: 11 }}>✓✓</span>}
+
+          {/* অনুবাদ দেখার জন্য ছোট টগল বাটন */}
+          {hasTranslation && !isDeleted && (
+            <button
+              onClick={onToggleTrans}
+              style={{
+                background: "none",
+                border: "none",
+                color: "var(--6366f1, #6366f1)",
+                fontSize: 10,
+                fontWeight: 600,
+                cursor: "pointer",
+                padding: 0,
+                textDecoration: "underline",
+              }}
+            >
+              {showTrans ? "Hide Pin" : "Translate"}
+            </button>
+          )}
+
+          {isMe && !isDeleted && (
+            <span style={{ color: "var(--accent)", fontSize: 11 }}>✓✓</span>
+          )}
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 import { chatService, Message } from "@/services/chat.service";
 import { useAuthStore } from "@/store/authStore";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 export const CHAT_KEYS = {
@@ -15,21 +15,32 @@ export const useChatInit = () => {
     if (accessToken) {
       chatService.setToken(accessToken);
     }
-  }, [accessToken]); // ✅ এখানে ছিল bug — ), [accessToken] আলাদা ছিল
+  }, [accessToken]); 
 };
 
 export const useConversations = () => {
   const { isAuthenticated, accessToken } = useAuthStore();
   const queryClient = useQueryClient();
 
+  useEffect(() => {
+    if (accessToken) {
+      chatService.setToken(accessToken);
+    }
+  }, [accessToken]);
+
   const query = useQuery({
     queryKey: CHAT_KEYS.conversations,
-    queryFn: () => chatService.getConversations(),
+    queryFn: async () => {
+      chatService.setToken(accessToken!);
+      return chatService.getConversations();
+    },
     enabled: isAuthenticated && !!accessToken,
-    staleTime: 30_000,
+    staleTime: 5 * 60_000,       
+    gcTime: 10 * 60_000,         
+    refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData, 
   });
 
-  // Conversations load হলে সব messages prefetch করুন
   useEffect(() => {
     if (!query.data || query.data.length === 0) return;
     query.data.forEach((conv) => {
