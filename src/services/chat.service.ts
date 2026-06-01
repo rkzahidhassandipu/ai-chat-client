@@ -115,7 +115,7 @@ class ChatService {
   private token: string | null = null;
   private events: ChatEvents = {};
 
-  constructor(baseUrl: string = "http://localhost:5000") {
+  constructor(baseUrl: string = "https://ai-chat-server-8ifp.onrender.com") {
     this.baseUrl = baseUrl;
   }
 
@@ -368,5 +368,5 @@ class ChatService {
 // Export singleton
 // ==========================================
 
-export const chatService = new ChatService("http://localhost:5000");
+export const chatService = new ChatService("https://ai-chat-server-8ifp.onrender.com");
 export default ChatService;
